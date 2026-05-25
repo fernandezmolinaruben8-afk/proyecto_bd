@@ -316,6 +316,7 @@ DELIMITER ;
 
 ### 4. Traslado de Difunto
 
+
 DELIMITER //
 CREATE PROCEDURE sp_trasladar_difunto(
     IN p_id_difunto INT,
