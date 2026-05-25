@@ -315,8 +315,7 @@ DELIMITER ;
 ```
 
 ### 4. Traslado de Difunto
-
-
+```sql
 DELIMITER //
 CREATE PROCEDURE sp_trasladar_difunto(
     IN p_id_difunto INT,
@@ -342,7 +341,7 @@ BEGIN
     UPDATE difunto SET id_ubicacion = p_nueva_ubicacion WHERE id_difunto = p_id_difunto;
 END //
 DELIMITER ;
-
+```
 ### 5. Actualizar precio de un servicio
 
 ```sql
