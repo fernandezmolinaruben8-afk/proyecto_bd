@@ -314,19 +314,33 @@ END //
 DELIMITER ;
 ```
 
-### 4. Consultar servicios por empleado
+### 4. Traslado de Difunto
 
-```sql
 DELIMITER //
-CREATE PROCEDURE sp_servicios_por_empleado(IN p_id_empleado INT)
+CREATE PROCEDURE sp_trasladar_difunto(
+    IN p_id_difunto INT,
+    IN p_nueva_ubicacion INT
+)
 BEGIN
-    SELECT s.nombre, s.descripcion
-    FROM servicio s
-    JOIN provee pr ON s.id_servicio = pr.id_servicio
-    WHERE pr.id_empleado = p_id_empleado;
+    DECLARE v_ubicacion_antigua INT;
+
+    -- 1. Averiguar qué ubicación tenía antes el difunto
+    
+    SELECT id_ubicacion INTO v_ubicacion_antigua 
+    FROM difunto 
+    WHERE id_difunto = p_id_difunto;
+
+    -- 2. Liberar la ubicación antigua
+    
+    UPDATE ubicacion SET disponibilidad = 'Disponible' WHERE id_ubicacion = v_ubicacion_antigua;
+
+    -- 3. Ocupar la nueva ubicación
+    UPDATE ubicacion SET disponibilidad = 'No disponible' WHERE id_ubicacion = p_nueva_ubicacion;
+
+    -- 4. Asignar la nueva ubicación al difunto
+    UPDATE difunto SET id_ubicacion = p_nueva_ubicacion WHERE id_difunto = p_id_difunto;
 END //
 DELIMITER ;
-```
 
 ### 5. Actualizar precio de un servicio
 
