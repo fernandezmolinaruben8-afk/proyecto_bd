@@ -542,7 +542,7 @@ DELIMITER ;
 
 ### 1. Registrar difunto, asignar ubicación y crear contrato
 
-```sql
+
 
 Este procedimiento automatiza esta transacción haciendo registrar al difunto, ocupando la ubicación y generando el contrato en un solo bloque seguro.
 
