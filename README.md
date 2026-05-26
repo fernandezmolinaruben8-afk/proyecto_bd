@@ -595,59 +595,175 @@ DELIMITER ;
 
 ---
 
-### 2. Añadir múltiples servicios a un contrato
+### 2. Mueve a un difunto de una tumba a otra, asegurando que la ubicación antigua se libere y la nueva se ocupe en el mismo instante.
 
 ```sql
-START TRANSACTION;
+DELIMITER //
 
-INSERT INTO contiene (id_contrato, id_servicio, cantidad, precio_unitario_aplicado)
-VALUES (1, 10, 1, 1500.00);
+CREATE PROCEDURE sp_tx_traslado_difunto (
+    IN p_id_difunto INT,
+    IN p_id_ubicacion_nueva INT
+)
+BEGIN
+    DECLARE v_id_ubicacion_vieja INT;
 
-INSERT INTO contiene (id_contrato, id_servicio, cantidad, precio_unitario_aplicado)
-VALUES (1, 15, 1, 300.00);
+    -- Manejo de errores
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error en la transacción: No se pudo realizar el traslado del difunto.';
+    END;
 
-INSERT INTO contiene (id_contrato, id_servicio, cantidad, precio_unitario_aplicado)
-VALUES (1, 20, 2, 50.00);
+    START TRANSACTION;
 
-COMMIT;
+    -- 1. Obtener la ubicación actual antes de modificarla
+    SELECT id_ubicacion INTO v_id_ubicacion_vieja 
+    FROM difunto 
+    WHERE id_difunto = p_id_difunto;
+
+    -- 2. Liberar la ubicación antigua
+    UPDATE ubicacion 
+    SET disponibilidad = 'Disponible' 
+    WHERE id_ubicacion = v_id_ubicacion_vieja;
+
+    -- 3. Ocupar la nueva ubicación
+    UPDATE ubicacion 
+    SET disponibilidad = 'No disponible' 
+    WHERE id_ubicacion = p_id_ubicacion_nueva;
+
+    -- 4. Actualizar la ficha del difunto con su nueva localización
+    UPDATE difunto 
+    SET id_ubicacion = p_id_ubicacion_nueva 
+    WHERE id_difunto = p_id_difunto;
+
+    COMMIT;
+END //
+
+DELIMITER ;
 ```
 
-### 3. Traslado de difunto a otra ubicación
+### 3. Actualización precio
+Este procedimiento actualiza de forma masiva el precio de una categoría o un servicio específico en el catálogo (servicio), pero garantiza que no se rompa la integridad de la base de datos si ocurre un error en la actualización.
 
 ```sql
-START TRANSACTION;
+DELIMITER //
 
-UPDATE ubicacion SET disponibilidad = 'Disponible'    WHERE id_ubicacion = 5;
-UPDATE ubicacion SET disponibilidad = 'No disponible' WHERE id_ubicacion = 12;
-UPDATE difunto   SET id_ubicacion = 12                WHERE id_difunto   = 1;
+CREATE PROCEDURE sp_tx_actualizar_tarifas_seguro (
+    IN p_id_servicio INT,
+    IN p_nuevo_precio DECIMAL(10,2)
+)
+BEGIN
+    -- Manejo de errores: Si el nuevo precio rompe alguna regla o falla la BD, se cancela todo
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error en la transacción: No se pudo actualizar la tarifa de forma segura.';
+    END;
 
-COMMIT;
+    -- Iniciar transacción
+    START TRANSACTION;
+
+    -- 1. Validar primero que el precio no sea negativo (aunque tengas un trigger, la Tx lo protege)
+    IF p_nuevo_precio < 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: El precio no puede ser inferior a 0.';
+    END IF;
+
+    -- 2. Actualizar el catálogo de servicios (Tabla: servicio) 
+    UPDATE servicio 
+    SET precio_base = p_nuevo_precio 
+    WHERE id_servicio = p_id_servicio; 
+
+    -- Nota: Gracias a la 2FN de tu modelo, los contratos antiguos no cambiarán su total, 
+    -- ya que la tabla 'contiene' almacena el 'precio_unitario_aplicado' de forma estática.
+
+    COMMIT;
+END //
+
+DELIMITER ;
+
 ```
 
 ### 4. Eliminar empleado y sus vínculos con servicios
+Los empleados están vinculados a los servicios que proveen a través de la tabla provee. Si un miembro del personal se da de baja por enfermedad o vacaciones, necesitas quitarle de forma inmediata todos sus servicios asignados y transferirlos a otro empleado disponible en un solo movimiento atómico para que la funeraria no deje de prestar ese soporte.
 
 ```sql
-START TRANSACTION;
+DELIMITER //
 
-DELETE FROM provee   WHERE id_empleado = 5;
-DELETE FROM personal WHERE id_empleado = 5;
+CREATE PROCEDURE sp_tx_reemplazar_personal_servicio (
+    IN p_id_empleado_saliente INT,
+    IN p_id_empleado_entrante INT
+)
+BEGIN
+    -- Manejo de errores
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error en la transacción: No se pudo realizar la reasignación de personal.';
+    END;
 
-COMMIT;
+    START TRANSACTION;
+
+    -- 1. Duplicar las asignaciones de servicios del empleado saliente para el empleado entrante (Tabla: provee) 
+    -- Usamos INSERT IGNORE por si el empleado entrante ya tenía asignado alguno de esos servicios previamente.
+    INSERT IGNORE INTO provee (id_servicio, id_empleado)
+    SELECT id_servicio, p_id_empleado_entrante
+    FROM provee
+    WHERE id_empleado = p_id_empleado_saliente;
+
+    -- 2. Eliminar de forma segura las asignaciones del empleado que sale de este turno/puesto
+    DELETE FROM provee 
+    WHERE id_empleado = p_id_empleado_saliente;
+
+    -- Si ambos pasos se completan, el relevo de funciones queda registrado de forma limpia
+    COMMIT;
+END //
+
+DELIMITER ;
+
 ```
 
 ### 5. Cancelar un contrato y liberar la ubicación
+Al anular un contrato de manera integral, elimina la relación de servicios, libera el espacio ocupado en el cementerio y borra el contrato original.
 
 ```sql
-START TRANSACTION;
+DELIMITER //
 
-SET @difunto_id = (SELECT id_difunto FROM contrato WHERE id_contrato = 10);
+CREATE PROCEDURE sp_tx_anular_contrato_total (
+    IN p_id_contrato INT
+)
+BEGIN
+    DECLARE v_id_difunto INT;
 
-UPDATE ubicacion
-SET disponibilidad = 'Disponible'
-WHERE id_ubicacion = (SELECT id_ubicacion FROM difunto WHERE id_difunto = @difunto_id);
+    -- Manejo de errores
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error en la transacción: No se pudo anular el contrato de forma segura.';
+    END;
 
-DELETE FROM contiene WHERE id_contrato = 10;
-DELETE FROM contrato WHERE id_contrato = 10;
+    START TRANSACTION;
 
-COMMIT;
+    -- 1. Obtener el ID del difunto vinculado al contrato
+    SELECT id_difunto INTO v_id_difunto 
+    FROM contrato 
+    WHERE id_contrato = p_id_contrato;
+
+    -- 2. Liberar la ubicación reservada en la tabla correspondiente
+    UPDATE ubicacion 
+    SET disponibilidad = 'Disponible' 
+    WHERE id_ubicacion = (SELECT id_ubicacion FROM difunto WHERE id_difunto = v_id_difunto);
+
+    -- 3. Eliminar primero los servicios asignados en la tabla intermedia (Hijos)
+    DELETE FROM contiene 
+    WHERE id_contrato = p_id_contrato;
+
+    -- 4. Eliminar el registro del contrato principal (Padre)
+    DELETE FROM contrato 
+    WHERE id_contrato = p_id_contrato;
+
+    COMMIT;
+END //
+
+DELIMITER ;
+
 ```
