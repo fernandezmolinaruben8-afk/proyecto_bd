@@ -543,18 +543,57 @@ DELIMITER ;
 ### 1. Registrar difunto, asignar ubicación y crear contrato
 
 ```sql
-START TRANSACTION;
 
-INSERT INTO difunto (nombre, apellido1, apellido2, dni, fecha_nacimiento, fecha_defuncion, causa_muerte, id_ubicacion)
-VALUES ('Juan', 'Pérez', 'García', '12345678Z', '1950-05-20', '2026-05-10', 'Causas naturales', 5);
+Este procedimiento automatiza esta transacción haciendo registrar al difunto, ocupando la ubicación y generando el contrato en un solo bloque seguro.
 
-UPDATE ubicacion SET disponibilidad = 'No disponible' WHERE id_ubicacion = 5;
+---
 
-INSERT INTO contrato (id_cliente, id_difunto, estado, fecha_contrato)
-VALUES (1, LAST_INSERT_ID(), 'Activo', CURDATE());
+```sql
+DELIMITER //
+CREATE PROCEDURE sp_registrar_servicio_completo (
+    IN p_id_cliente INT,
+    IN p_nombre_difunto VARCHAR(50),
+    IN p_apellido1_difunto VARCHAR(35),
+    IN p_apellido2_difunto VARCHAR(35),
+    IN p_dni_difunto VARCHAR(9),
+    IN p_fecha_nac DATE,
+    IN p_fecha_def DATE,
+    IN p_causa_muerte VARCHAR(255),
+    IN p_id_ubicacion INT,
+    IN p_estado_contrato VARCHAR(50)
+)
+BEGIN
+    -- Manejo de errores: si ocurre una excepción, deshace todo (ROLLBACK)
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error en la transacción: No se pudo registrar el servicio completo.';
+    END;
 
-COMMIT;
+    -- Iniciar la transacción de forma segura
+    START TRANSACTION;
+
+    -- 1. Insertar el difunto (Tabla: difunto)
+    INSERT INTO difunto (nombre, apellido1, apellido2, dni, fecha_nacimiento, fecha_defuncion, causa_muerte, id_ubicacion)
+    VALUES (p_nombre_difunto, p_apellido1_difunto, p_apellido2_difunto, p_dni_difunto, p_fecha_nac, p_fecha_def, p_causa_muerte, p_id_ubicacion);
+
+    -- 2. Actualizar el estado de la ubicación a 'No disponible' (Tabla: ubicacion)
+    UPDATE ubicacion 
+    SET disponibilidad = 'No disponible' 
+    WHERE id_ubicacion = p_id_ubicacion;
+
+    -- 3. Crear el contrato asociado utilizando el ID del difunto recién generado (Tabla: contrato)
+    INSERT INTO contrato (id_cliente, id_difunto, estado, fecha_contrato)
+    VALUES (p_id_cliente, LAST_INSERT_ID(), p_estado_contrato, CURDATE());
+
+    -- Si todo se ejecutó correctamente, guardamos los cambios definitivamente
+    COMMIT;
+END //
+DELIMITER ;
+
 ```
+
+---
 
 ### 2. Añadir múltiples servicios a un contrato
 
