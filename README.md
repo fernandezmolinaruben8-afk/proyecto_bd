@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS provee (
 ## 4. Vistas
 
 ### 1. Difuntos con su ubicación
-
+Muestra los datos básicos de cada difunto junto con su sector, fila y número asignados.
 ```sql
 CREATE OR REPLACE VIEW vista_ubicacion_difuntos AS
 SELECT
@@ -191,7 +191,7 @@ LEFT JOIN ubicacion AS u ON d.id_ubicacion = u.id_ubicacion;
 ```
 
 ### 2. Facturación por contrato
-
+Calcula el importe acumulado total de cada contrato sumando el precio por la cantidad de todos los servicios asociados.
 ```sql
 CREATE OR REPLACE VIEW vista_total_contratos AS
 SELECT
@@ -205,7 +205,7 @@ GROUP BY co.id_contrato;
 ```
 
 ### 3. Personal y servicios
-
+Lista qué trabajadores de la plantilla están capacitados para ofrecer cada uno de los servicios específicos de la funeraria.
 ```sql
 CREATE OR REPLACE VIEW vista_empleados_servicios AS
 SELECT
@@ -217,8 +217,7 @@ JOIN servicio AS s  ON pr.id_servicio = s.id_servicio;
 ```
 
 ### 4. Servicios más vendidos
-
-Solo muestra servicios contratados más de 5 veces.
+Filtra y expone los nombres de los servicios de alta demanda que se han vendido en más de 5 ocasiones.
 
 ```sql
 CREATE OR REPLACE VIEW vista_servicios_populares AS
@@ -233,7 +232,7 @@ HAVING veces_contratado > 5;
 ```
 
 ### 5. Carga de trabajo por empleado
-
+Contabiliza la cantidad total de especialidades de servicio que tiene asignadas cada empleado para medir su volumen de funciones.
 ```sql
 CREATE OR REPLACE VIEW vista_carga_trabajo_personal AS
 SELECT
