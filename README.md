@@ -387,7 +387,7 @@ DELIMITER ;
 ## 6. Disparadores
 
 ### 1. Liberar ubicación al eliminar un difunto
-
+Libera y marca como disponible de forma automática un espacio cuando el registro de su difunto es eliminado.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_liberar_ubicacion_delete
@@ -400,7 +400,7 @@ DELIMITER ;
 ```
 
 ### 2. Validar que no se asigne una ubicación ocupada
-
+Bloquea la inserción de un difunto si el espacio asignado ya se encuentra ocupado por otro.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_validar_ubicacion_disponible
@@ -418,7 +418,7 @@ DELIMITER ;
 ```
 
 ### 3. Evitar precios negativos en servicios
-
+Cancela cualquier intento de asignar un coste negativo a un servicio restaurando de forma automática su importe anterior.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_validar_precio_positivo
@@ -432,7 +432,7 @@ DELIMITER ;
 ```
 
 ### 4. Formatear DNI a mayúsculas automáticamente
-
+Convierte y guarda de forma automática en letras mayúsculas el documento de identidad de cualquier cliente nuevo.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_cliente_dni_upper
@@ -444,7 +444,7 @@ DELIMITER ;
 ```
 
 ### 5. Impedir la eliminación de clientes con contratos activos
-
+Cancela la eliminación de un cliente si este cuenta con acuerdos de servicios funerarios vigentes en el sistema.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_prevenir_borrado_cliente
@@ -462,7 +462,7 @@ DELIMITER ;
 ```
 
 ### 6. Asignación automática de fecha de contrato
-
+Registra de forma automática el día actual en los nuevos acuerdos comerciales si no se introduce ninguno de forma manual.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_fecha_contrato_default
@@ -476,7 +476,7 @@ DELIMITER ;
 ```
 
 ### 7. Control de cantidad mínima en servicios del contrato
-
+Fuerza que el volumen mínimo contratado de un servicio sea de al menos una unidad si se introduce un valor nulo o negativo.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_validar_cantidad_servicio
@@ -490,7 +490,7 @@ DELIMITER ;
 ```
 
 ### 8. Log de cambios de email de clientes
-
+Registra en un historial de movimientos el correo antiguo y el nuevo cada vez que un cliente modifica sus datos de contacto.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_log_email_cliente
@@ -505,7 +505,7 @@ DELIMITER ;
 ```
 
 ### 9. Prevención de ubicaciones sin sector o número
-
+Bloquea la creación de nuevos espacios si no se especifican obligatoriamente los datos físicos de sector y número.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_validar_datos_ubicacion
@@ -520,7 +520,7 @@ DELIMITER ;
 ```
 
 ### 10. Sincronizar disponibilidad al cambiar ubicación de difunto
-
+Actualiza de forma automática los estados de ocupación de las zonas físicas cuando un difunto es trasladado de un lugar a otro.
 ```sql
 DELIMITER //
 CREATE TRIGGER tr_cambio_ubicacion_difunto
