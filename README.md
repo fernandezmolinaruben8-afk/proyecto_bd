@@ -673,7 +673,7 @@ BEGIN
     SET precio_base = p_nuevo_precio 
     WHERE id_servicio = p_id_servicio; 
 
-    -- Nota: Gracias a la 2FN de tu modelo, los contratos antiguos no cambiarán su total, 
+    -- Nota: Gracias a la 2FN, los contratos antiguos no cambiarán su total, 
     -- ya que la tabla 'contiene' almacena el 'precio_unitario_aplicado' de forma estática.
 
     COMMIT;
