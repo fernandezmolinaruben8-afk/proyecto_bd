@@ -314,6 +314,7 @@ DELIMITER ;
 ```
 
 ### 4. Traslado de Difunto
+Cambia la ubicación de un difunto, liberando de forma automática su espacio anterior y ocupando el nuevo.
 ```sql
 DELIMITER //
 CREATE PROCEDURE sp_trasladar_difunto(
@@ -342,7 +343,7 @@ END //
 DELIMITER ;
 ```
 ### 5. Actualizar precio de un servicio
-
+Modifica el precio base de un servicio específico de la funeraria a partir de su identificador único.
 ```sql
 DELIMITER //
 CREATE PROCEDURE sp_actualizar_precio_servicio(
