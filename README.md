@@ -83,7 +83,7 @@ PROVEE:     (id_servicio, id_empleado)
 
 **1FN** — En las tablas `DIFUNTO`, `CLIENTE` y `PERSONAL`, el campo `apellidos` se divide en `apellido1` y `apellido2` para facilitar búsquedas.
 
-**2FN** — Las relaciones N:M entre `CONTRATO`↔`SERVICIO` y `SERVICIO`↔`PERSONAL` se resuelven con las tablas intermedias `CONTIENE` y `PROVEE` respectivamente.
+**2FN** —  Está en 2FN ya que está en 1FN y todos los atributos no clave tienen dependencia funcional completa de la clave primaria.
 
 **3FN** — El campo `total` es un valor calculado (suma de precios de servicios). Técnicamente, para una 3FN estricta, no debería almacenarse directamente en la tabla, ya que depende de los servicios vinculados.
 
